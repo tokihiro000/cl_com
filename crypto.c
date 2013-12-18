@@ -10,7 +10,7 @@
 //
 //     ファイルの読み込み
 //
-//     fnameファイルから、len分のデータを読み込む
+//     fnameファイルから、データを読み込む。
 //
 unsigned char *read_file(int *len, char *fname)
 {
@@ -23,7 +23,6 @@ unsigned char *read_file(int *len, char *fname)
     return NULL;
   }
 
-  printf("open binary\n");
   if (stat(fname, &sbuf) == -1) {
     return NULL;
   }
@@ -50,50 +49,78 @@ unsigned char *read_file(int *len, char *fname)
 //
 //     文字列の暗号化(cbcモード)
 //
-//     lengthバイト文字列cの中身を１バイトずつ加算し、その値を返す
-//
 unsigned char *str_enc(char *data, unsigned char *key, unsigned char *iv){
   EVP_CIPHER_CTX en;
-  int datasize, i, c_len, f_len=0, c[100];
-  unsigned char *ciphertext, tmp[100];
+  int datasize, i, c_len, f_len;
+  unsigned char *ciphertext;
 
+  f_len = 0;
   datasize = strlen(data);
   c_len = (datasize + EVP_MAX_BLOCK_LENGTH);
   ciphertext = calloc(c_len, sizeof(char));
 
   EVP_CIPHER_CTX_init(&en);
-  EVP_EncryptInit_ex(&en, EVP_aes_128_cbc(), NULL, (unsigned char *)key, iv);
-  EVP_EncryptUpdate(&en, (unsigned char *)ciphertext, &c_len, (unsigned char *)data, datasize);
-  EVP_EncryptFinal_ex(&en, (unsigned char *)(ciphertext+c_len), &f_len);
+  EVP_EncryptInit_ex(&en, EVP_aes_128_cbc(), NULL, (unsigned char *)key, (unsigned char *)iv);
+  EVP_EncryptUpdate(&en, (unsigned char *)ciphertext, &c_len, (char *)data, datasize);
+  EVP_EncryptFinal_ex(&en, (unsigned char *)(ciphertext + c_len), &f_len);
 
   printf("[C] = ");
   for(i=0; i < (c_len+f_len); i++){
     printf("%02x", ciphertext[i]);
-    c[i] = ciphertext[i];
   }
   putchar('\n');
+
   EVP_CIPHER_CTX_cleanup(&en);
 
   return ciphertext;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//     文字列の復号(cbcモード)
+//
+char *str_dec(unsigned char *enc_data, unsigned char *key, unsigned char *iv, int data_len) {
+  EVP_CIPHER_CTX  de;
+  int     p_len, f_len;
+  char    *plaintext;
+  
+  f_len = 0;
+  p_len = data_len;
+  plaintext = calloc(p_len+1, sizeof(char));
 
-int main()
+  EVP_CIPHER_CTX_init(&de);
+  EVP_DecryptInit_ex(&de, EVP_aes_128_cbc(), NULL, (unsigned char *)key, (unsigned char *)iv);  
+  EVP_DecryptUpdate(&de, (unsigned char *)plaintext, &p_len, (unsigned char *)enc_data, data_len);
+  EVP_DecryptFinal_ex(&de, (unsigned char *)(plaintext + p_len), &f_len);
+  
+  plaintext[p_len + f_len]='\0';
+  printf("[%s]\n",plaintext);
+  
+  EVP_CIPHER_CTX_cleanup(&de);
+  
+  return plaintext;
+}
+
+int main(void)
 {
-  int len, len2;
-  char data[15];
+  int len, len2, datasize;
+  char data[201], *p;
   unsigned char *c, *key, *iv;
 
   key = read_file(&len, "k1.txt");
   iv  = read_file(&len2, "iv.txt");
 
-  printf("enter the data[15 byte]:");
+  printf("enter the data[200 byte]:");
   scanf("%s", data);
+  datasize = (strlen(data) / 16);
 
   c = str_enc(data, key, iv);
+  p = str_dec(c, key, iv, 16*(datasize + 1));
 
-  free(c);
   free(key);
   free(iv);
+  free(c);
+  free(p);
+
   return(0);
 }
