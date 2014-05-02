@@ -83,21 +83,21 @@ char *str_dec(unsigned char *enc_data, unsigned char *key, unsigned char *iv, in
   EVP_CIPHER_CTX  de;
   int     p_len, f_len;
   char    *plaintext;
-  
+
   f_len = 0;
   p_len = data_len;
   plaintext = calloc(p_len+1, sizeof(char));
 
   EVP_CIPHER_CTX_init(&de);
-  EVP_DecryptInit_ex(&de, EVP_aes_128_cbc(), NULL, (unsigned char *)key, (unsigned char *)iv);  
+  EVP_DecryptInit_ex(&de, EVP_aes_128_cbc(), NULL, (unsigned char *)key, (unsigned char *)iv);
   EVP_DecryptUpdate(&de, (unsigned char *)plaintext, &p_len, (unsigned char *)enc_data, data_len);
   EVP_DecryptFinal_ex(&de, (unsigned char *)(plaintext + p_len), &f_len);
-  
+
   plaintext[p_len + f_len]='\0';
   printf("[%s]\n",plaintext);
-  
+
   EVP_CIPHER_CTX_cleanup(&de);
-  
+
   return plaintext;
 }
 
